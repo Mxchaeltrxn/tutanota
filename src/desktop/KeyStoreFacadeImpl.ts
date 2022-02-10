@@ -1,8 +1,8 @@
 import type {SecretStorage} from "./sse/SecretStorage"
 import {DesktopCryptoFacade} from "./DesktopCryptoFacade"
 import {log} from "./DesktopLog"
-import {getFromMap} from "@tutao/tutanota-utils"
-import {base64ToKey, keyToBase64} from "@tutao/tutanota-crypto"
+import {Base64, base64ToUint8Array, getFromMap, uint8ArrayToBase64} from "@tutao/tutanota-utils"
+import {base64ToKey, keyToBase64,} from "@tutao/tutanota-crypto"
 
 interface NativeKeySpec {
 	/**
@@ -30,6 +30,12 @@ export const CredentialsKeySpec: NativeKeySpec = Object.freeze({
 	cached: false
 })
 
+export const DatabaseKeySpec: NativeKeySpec = Object.freeze({
+	serviceName: "tutanota-database",
+	accountName: "tutanota-database",
+	cached: false
+})
+
 /** Interface for accessing/generating/caching keys. */
 export interface DesktopKeyStoreFacade {
 	/**
@@ -41,6 +47,12 @@ export interface DesktopKeyStoreFacade {
 	 * get the key used to encrypt saved credentials
 	 */
 	getCredentialsKey(): Promise<Aes256Key>
+
+	/**
+	 * get the key used to encrypt the SQLCipher database
+	 * this is encrypted using the credentials key
+	 */
+	getDatabaseKey(): Promise<Aes256Key>
 }
 
 export class KeyStoreFacadeImpl implements DesktopKeyStoreFacade {
@@ -55,17 +67,23 @@ export class KeyStoreFacadeImpl implements DesktopKeyStoreFacade {
 	/** @inheritDoc */
 	async getDeviceKey(): Promise<Aes256Key> {
 		// Device key can be cached
-		return this.resolveKey(DeviceKeySpec)
+		return this.resolveKey(DeviceKeySpec, null)
 	}
 
 	/** @inheritDoc */
 	async getCredentialsKey(): Promise<Aes256Key> {
-		return this.resolveKey(CredentialsKeySpec)
+		return this.resolveKey(CredentialsKeySpec, null)
 	}
 
-	private resolveKey(spec: NativeKeySpec): Promise<Aes256Key> {
+	/** @inheritDoc */
+	async getDatabaseKey(): Promise<Aes256Key> {
+		const credentialsKey = await this.resolveKey(CredentialsKeySpec, null)
+		return this.resolveKey(DatabaseKeySpec, credentialsKey)
+	}
+
+	private resolveKey(spec: NativeKeySpec, encryptWith: Aes256Key | null): Promise<Aes256Key> {
 		// Asking for the same key in parallel easily breaks keytar/gnome-keyring so we cache the promise.
-		const entry = getFromMap(this.resolvedKeys, spec, () => this.fetchOrGenerateKey(spec))
+		const entry = getFromMap(this.resolvedKeys, spec, () => this.fetchOrGenerateKey(spec, encryptWith))
 
 		if (spec.cached) {
 			// We only want to cache *successful* promises, otherwise we have no chance to retry.
@@ -81,27 +99,52 @@ export class KeyStoreFacadeImpl implements DesktopKeyStoreFacade {
 		}
 	}
 
-	private async fetchOrGenerateKey(spec: NativeKeySpec): Promise<Aes256Key> {
+	private async fetchOrGenerateKey(spec: NativeKeySpec, encryptWith: Aes256Key | null): Promise<Aes256Key> {
 		log.debug("resolving key...", spec.serviceName)
 		try {
-			return (await this.fetchKey(spec)) ?? (await this.generateAndStoreKey(spec))
+			return (await this.fetchKey(spec, encryptWith)) ?? (await this.generateAndStoreKey(spec, encryptWith))
 		} catch (e) {
 			log.warn("Failed to resolve/generate key: ", spec.serviceName, e)
 			throw e
 		}
 	}
 
-	private async fetchKey(spec: NativeKeySpec): Promise<Aes256Key | null> {
+	private async fetchKey(spec: NativeKeySpec, encryptWith: Aes256Key | null): Promise<Aes256Key | null> {
 		const base64 = await this.secretStorage.getPassword(spec.serviceName, spec.accountName)
-		return base64 == null ? null : base64ToKey(base64)
+
+		if (base64 == null) {
+			return null
+		}
+
+		return this.maybeDecrypt(base64, encryptWith)
+
 	}
 
-	private async generateAndStoreKey(spec: NativeKeySpec): Promise<Aes256Key> {
+	private async generateAndStoreKey(spec: NativeKeySpec, encryptWith: Aes256Key | null): Promise<Aes256Key> {
 		log.warn(`key ${spec.serviceName} not found, generating a new one`)
 
 		const key: Aes256Key = this.crypto.generateDeviceKey()
 
-		await this.secretStorage.setPassword(spec.serviceName, spec.accountName, keyToBase64(key))
+		const base64 = this.maybeEncrypt(key, encryptWith)
+
+		await this.secretStorage.setPassword(spec.serviceName, spec.accountName, base64)
 		return key
 	}
+
+	private maybeEncrypt(key: Aes256Key, encryptionKey: Aes256Key | null): Base64 {
+		if (encryptionKey == null) {
+			return keyToBase64(key)
+		} else {
+			return uint8ArrayToBase64(this.crypto.aes256Encrypt256Key(encryptionKey, key))
+		}
+	}
+
+	private maybeDecrypt(base64: Base64, encryptionKey: Aes256Key | null): Aes256Key {
+		if (encryptionKey == null) {
+			return base64ToKey(base64)
+		} else {
+			return this.crypto.aes256Decrypt256Key(encryptionKey, base64ToUint8Array(base64))
+		}
+	}
+
 }

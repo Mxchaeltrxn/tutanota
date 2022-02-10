@@ -71,6 +71,9 @@ export function makeKeyStoreFacade(uint8ArrayKey: Uint8Array): DesktopKeyStoreFa
 		},
 		getCredentialsKey(): Promise<Aes256Key> {
 			return Promise.resolve(uint8ArrayToKey(uint8ArrayKey))
+		},
+		getDatabaseKey(): Promise<Aes256Key> {
+			return Promise.resolve(uint8ArrayToKey(uint8ArrayKey))
 		}
 	}
 }

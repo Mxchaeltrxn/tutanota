@@ -143,7 +143,13 @@ async function createComponents(): Promise<Components> {
 	const offlineDbFactory = async (userId: Id) => {
 		const db = new OfflineDb(buildOptions.sqliteNativePath)
 		const dbPath = path.join(app.getPath("userData"), `offline_${userId}.sqlite`)
-		await db.init(dbPath)
+
+		// TODO
+		//      I forget if we had planned to have another level of indirection here
+		//      or if we just use the key directly from the keychain
+		const key = await keyStoreFacade.getDeviceKey()
+		console.log(key)
+		await db.init(dbPath, key)
 		return db
 	}
 
