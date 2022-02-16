@@ -67,6 +67,7 @@ pipeline {
             steps {
                 unstash 'libcrypto-linux'
                 unstash 'libcrypto-mac'
+   				   // FIXME uncomment when windows build works
 //                 unstash 'libcrypto-win'
 
 				script {
@@ -75,24 +76,25 @@ pipeline {
 					util.publishToNexus(
 						groupId: "lib",
 						artifactId: "libcrypto",
-						version: "${OPENSSL_VERSION}",
+						version: "${OPENSSL_VERSION}-linux",
 						assetFilePath: "${WORKSPACE}/libcrypto-linux.a",
 						fileExtension: 'a'
 					)
 					util.publishToNexus(
 						groupId: "lib",
 						artifactId: "libcrypto",
-						version: "${OPENSSL_VERSION}",
+						version: "${OPENSSL_VERSION}-mac",
 						assetFilePath: "${WORKSPACE}/libcrypto-mac.a",
 						fileExtension: 'a'
 					)
-					util.publishToNexus(
-						groupId: "lib",
-						artifactId: "libcrypto",
-						version: "${OPENSSL_VERSION}",
-						assetFilePath: "${WORKSPACE}/libcrypto-win.a",
-						fileExtension: 'a'
-					)
+					// FIXME uncomment when windows build works
+// 					util.publishToNexus(
+// 						groupId: "lib",
+// 						artifactId: "libcrypto",
+// 						version: "${OPENSSL_VERSION}-win",
+// 						assetFilePath: "${WORKSPACE}/libcrypto-win.a",
+// 						fileExtension: 'a'
+// 					)
 				}
             }
         }
