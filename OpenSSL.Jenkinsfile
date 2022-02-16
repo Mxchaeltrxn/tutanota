@@ -17,7 +17,7 @@ pipeline {
                         label 'linux'
                     }
                     steps {
-                   		build(platform: "linux", config: "")
+                   		buildOpenssl(platform: "linux", config: "")
                     }
                 }
                 stage('build mac') {
@@ -25,7 +25,7 @@ pipeline {
                         label 'mac'
                     }
                     steps {
-						build(platform: "mac", config: "")
+						buildOpenssl(platform: "mac", config: "")
                     }
                 }
                 stage('cross compile for windows') {
@@ -34,7 +34,7 @@ pipeline {
                     }
                     steps {
                     	echo "ignoring windows for now"
-//                     	build(platform: "win", config: "--cross-compile-prefix=x86_64-w64-mingw32- mingw64")
+//                     	buildOpenssl(platform: "win", config: "--cross-compile-prefix=x86_64-w64-mingw32- mingw64")
                     }
                 }
             }
@@ -51,7 +51,7 @@ pipeline {
     }
 }
 
-def build(Map params) {
+def buildOpenssl(Map params) {
 	sh "rm -rf openssl" // Jenkins doesn't seem to use a clean workspace each time
 	sh "git clone git://git.openssl.org/openssl.git"
 	script {
