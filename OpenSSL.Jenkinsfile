@@ -59,29 +59,31 @@ pipeline {
                 unstash 'libcrypto-mac'
                 unstash 'libcrypto-win'
 
-				def util = load "jenkins-lib/util.groovy"
+				script {
+					def util = load "jenkins-lib/util.groovy"
 
-                util.publishToNexus(
-                    groupId: "lib",
-                    artifactId: "libcrypto",
-                    version: "${OPENSSL_VERSION}",
-                    assetFilePath: "${WORKSPACE}/libcrypto-linux.a",
-                    fileExtension: 'a'
-                )
-                util.publishToNexus(
-                    groupId: "lib",
-                    artifactId: "libcrypto",
-                    version: "${OPENSSL_VERSION}",
-                    assetFilePath: "${WORKSPACE}/libcrypto-mac.a",
-                    fileExtension: 'a'
-                )
-                util.publishToNexus(
-                    groupId: "lib",
-                    artifactId: "libcrypto",
-                    version: "${OPENSSL_VERSION}",
-                    assetFilePath: "${WORKSPACE}/libcrypto-win.a",
-                    fileExtension: 'a'
-                )
+					util.publishToNexus(
+						groupId: "lib",
+						artifactId: "libcrypto",
+						version: "${OPENSSL_VERSION}",
+						assetFilePath: "${WORKSPACE}/libcrypto-linux.a",
+						fileExtension: 'a'
+					)
+					util.publishToNexus(
+						groupId: "lib",
+						artifactId: "libcrypto",
+						version: "${OPENSSL_VERSION}",
+						assetFilePath: "${WORKSPACE}/libcrypto-mac.a",
+						fileExtension: 'a'
+					)
+					util.publishToNexus(
+						groupId: "lib",
+						artifactId: "libcrypto",
+						version: "${OPENSSL_VERSION}",
+						assetFilePath: "${WORKSPACE}/libcrypto-win.a",
+						fileExtension: 'a'
+					)
+				}
             }
         }
     }
