@@ -60,7 +60,7 @@ def buildOpenssl(Map params) {
 			sh "./config ${CONFIGURE_PARAMS} ${params.config}"
 			sh "make build_generated && make libcrypto.a && make test"
 			sh "mv libcrypto.a libcrypto-${params.platform}.a"
-			stash includes: 'libcrypto-${params.platform}.a', name: "libcrypto-${params.platform}"
+			stash includes: "libcrypto-${params.platform}.a", name: "libcrypto-${params.platform}"
 		}
 	}
 }
