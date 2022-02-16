@@ -17,7 +17,7 @@ pipeline {
                         label 'linux'
                     }
                     steps {
-                   		build("linux", "")
+                   		build(platform: "linux", config: "")
                     }
                 }
                 stage('build mac') {
@@ -25,7 +25,7 @@ pipeline {
                         label 'mac'
                     }
                     steps {
-						build("mac", "")
+						build(platform: "mac", config: "")
                     }
                 }
                 stage('cross compile for windows') {
@@ -34,7 +34,7 @@ pipeline {
                     }
                     steps {
                     	echo "ignoring windows for now"
-//                     	build("win", "--cross-compile-prefix=x86_64-w64-mingw32- mingw64")
+//                     	build(platform: "win", config: "--cross-compile-prefix=x86_64-w64-mingw32- mingw64")
                     }
                 }
             }
@@ -51,16 +51,18 @@ pipeline {
     }
 }
 
-def build(String platform, String extraConfigParam) {
+def build(Map params) {
 	sh "rm -rf openssl" // Jenkins doesn't seem to use a clean workspace each time
 	sh "git clone git://git.openssl.org/openssl.git"
-	dir ("${WORKSPACE}/openssl") {
-		sh "git checkout ${OPENSSL_BRANCH}"
-		sh "./config ${CONFIGURE_PARAMS} ${extraConfigParam}"
-		sh "make build_generated && make libcrypto.a && make test"
-		sh "mv libcrypto.a libcrypto-${platform}.a"
+	script {
+		dir ("${WORKSPACE}/openssl") {
+			sh "git checkout ${OPENSSL_BRANCH}"
+			sh "./config ${CONFIGURE_PARAMS} ${params.config}"
+			sh "make build_generated && make libcrypto.a && make test"
+			sh "mv libcrypto.a libcrypto-${params.platform}.a"
+		}
+		stash includes: '${WORKSPACE}/libcrypto-${params.platform}.a', name: "libcrypto-${params.platform}"
 	}
-	stash includes: '${WORKSPACE}/libcrypto-${platform}.a', name: "libcrypto-${platform}"
 }
 
 def publish(String platform) {
