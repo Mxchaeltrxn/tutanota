@@ -49,6 +49,7 @@ pipeline {
                         label 'linux'
                     }
                     steps {
+                    	echo "ignoring windows for now"
                     	// sh "rm -rf openssl" // Jenkins doesn't seem to use a clean workspace each time
                         // sh "git clone git://git.openssl.org/openssl.git"
 						// dir ("${WORKSPACE}/openssl") {
