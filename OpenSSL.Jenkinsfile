@@ -17,7 +17,7 @@ pipeline {
                         label 'linux'
                     }
                     steps {
-                   		build "linux", ""
+                   		build("linux", "")
                     }
                 }
                 stage('build mac') {
@@ -25,7 +25,7 @@ pipeline {
                         label 'mac'
                     }
                     steps {
-						build "mac", ""
+						build("mac", "")
                     }
                 }
                 stage('cross compile for windows') {
@@ -34,15 +34,12 @@ pipeline {
                     }
                     steps {
                     	echo "ignoring windows for now"
-//                     	build "win", "--cross-compile-prefix=x86_64-w64-mingw32- mingw64"
+//                     	build("win", "--cross-compile-prefix=x86_64-w64-mingw32- mingw64")
                     }
                 }
             }
         }
         stage('publish to nexus') {
-			agent {
-				'master'
-			}
             steps {
 				script {
 					publish("linux")
