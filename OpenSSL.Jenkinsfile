@@ -67,7 +67,7 @@ def buildOpenssl(Map params) {
 
 def publish(String platform) {
 
-	unstash 'libcrypto-${platform}'
+	unstash "libcrypto-${platform}"
 
 	script {
 		def util = load "jenkins-lib/util.groovy"
