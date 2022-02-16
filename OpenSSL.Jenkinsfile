@@ -21,7 +21,7 @@ pipeline {
                         sh "git clone git://git.openssl.org/openssl.git"
                         dir ("${WORKSPACE}/openssl") {
 							sh "git checkout ${OPENSSL_BRANCH}"
-							sh "perl ./Configure ${CONFIGURE_PARAMS}"
+							sh "./config ${CONFIGURE_PARAMS}"
 							sh "make build_generated && make libcrypto.a"
 							sh "mv libcrypto.a libcrypto-linux.a"
 							stash includes: 'libcrypto-linux.a', name: 'libcrypto-linux'
@@ -37,7 +37,7 @@ pipeline {
                         sh "git clone git://git.openssl.org/openssl.git"
 						dir ("${WORKSPACE}/openssl") {
 							sh "git checkout ${OPENSSL_BRANCH}"
-							sh "perl ./Configure ${CONFIGURE_PARAMS}"
+							sh "./config ${CONFIGURE_PARAMS}"
 							sh "make build_generated && make libcrypto.a"
 							sh "mv libcrypto.a libcrypto-mac.a"
 							stash includes: 'libcrypto-mac.a', name: 'libcrypto-mac'
@@ -49,15 +49,15 @@ pipeline {
                         label 'linux'
                     }
                     steps {
-                    	sh "rm -rf openssl" // Jenkins doesn't seem to use a clean workspace each time
-                        sh "git clone git://git.openssl.org/openssl.git"
-						dir ("${WORKSPACE}/openssl") {
-							sh "git checkout ${OPENSSL_BRANCH}"
-							sh "perl ./Configure --cross-compile-prefix=x86_64-w64-mingw32- mingw64 ${CONFIGURE_PARAMS}"
-							sh "make build_generated && make libcrypto.a"
-							sh "mv libcrypto.a libcrypto-win.a"
-							stash includes: 'libcrypto-win.a', name: 'libcrypto-win'
-                        }
+                    	// sh "rm -rf openssl" // Jenkins doesn't seem to use a clean workspace each time
+                        // sh "git clone git://git.openssl.org/openssl.git"
+						// dir ("${WORKSPACE}/openssl") {
+						//	sh "git checkout ${OPENSSL_BRANCH}"
+						//	sh "perl ./Configure --cross-compile-prefix=x86_64-w64-mingw32- mingw64 ${CONFIGURE_PARAMS}"
+						//	sh "make build_generated && make libcrypto.a"
+						//	sh "mv libcrypto.a libcrypto-win.a"
+						//	stash includes: 'libcrypto-win.a', name: 'libcrypto-win'
+                        // }
                     }
                 }
             }
