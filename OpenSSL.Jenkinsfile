@@ -17,6 +17,7 @@ pipeline {
                         label 'linux'
                     }
                     steps {
+                    	sh "rm -rf openssl" // Jenkins doesn't seem to use a clean workspace each time
                         sh "git clone git://git.openssl.org/openssl.git"
                         dir ("${WORKSPACE}/openssl") {
 							sh "git checkout ${OPENSSL_BRANCH}"
@@ -32,6 +33,7 @@ pipeline {
                         label 'mac'
                     }
                     steps {
+                    	sh "rm -rf openssl" // Jenkins doesn't seem to use a clean workspace each time
                         sh "git clone git://git.openssl.org/openssl.git"
 						dir ("${WORKSPACE}/openssl") {
 							sh "git checkout ${OPENSSL_BRANCH}"
@@ -47,6 +49,7 @@ pipeline {
                         label 'linux'
                     }
                     steps {
+                    	sh "rm -rf openssl" // Jenkins doesn't seem to use a clean workspace each time
                         sh "git clone git://git.openssl.org/openssl.git"
 						dir ("${WORKSPACE}/openssl") {
 							sh "git checkout ${OPENSSL_BRANCH}"
@@ -93,4 +96,15 @@ pipeline {
             }
         }
     }
+
+	post {
+		// Clean after build
+		always {
+			cleanWs(cleanWhenNotBuilt: true,
+					deleteDirs: true,
+					disableDeferredWipeout: true,
+					notFailBuild: true,
+					patterns: [[pattern: '.gitignore', type: 'INCLUDE']])
+		}
+	}
 }
