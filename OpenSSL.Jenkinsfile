@@ -17,12 +17,14 @@ pipeline {
                         label 'linux'
                     }
                     steps {
-                        sh "git clone git://git.openssl.org/openssl.git && cd openssl"
-                        sh "git checkout ${OPENSSL_BRANCH}"
-                        sh "perl ./Configure ${CONFIGURE_PARAMS}"
-                        sh "make build_generated && make libcrypto.a"
-                        sh "mv libcrypto.a libcrypto-linux.a"
-                        stash includes: 'libcrypto-linux.a', name: 'libcrypto-linux'
+                        sh "git clone git://git.openssl.org/openssl.git"
+                        dir ("${WORKSPACE}/openssl") {
+							sh "git checkout ${OPENSSL_BRANCH}"
+							sh "perl ./Configure ${CONFIGURE_PARAMS}"
+							sh "make build_generated && make libcrypto.a"
+							sh "mv libcrypto.a libcrypto-linux.a"
+							stash includes: 'libcrypto-linux.a', name: 'libcrypto-linux'
+                        }
                     }
                 }
                 stage('build mac') {
@@ -30,12 +32,14 @@ pipeline {
                         label 'mac'
                     }
                     steps {
-                        sh "git clone git://git.openssl.org/openssl.git && cd openssl"
-                        sh "git checkout ${OPENSSL_BRANCH}"
-                        sh "perl ./Configure ${CONFIGURE_PARAMS}"
-                        sh "make build_generated && make libcrypto.a"
-                        sh "mv libcrypto.a libcrypto-mac.a"
-                        stash includes: 'libcrypto-mac.a', name: 'libcrypto-mac'
+                        sh "git clone git://git.openssl.org/openssl.git"
+						dir ("${WORKSPACE}/openssl") {
+							sh "git checkout ${OPENSSL_BRANCH}"
+							sh "perl ./Configure ${CONFIGURE_PARAMS}"
+							sh "make build_generated && make libcrypto.a"
+							sh "mv libcrypto.a libcrypto-mac.a"
+							stash includes: 'libcrypto-mac.a', name: 'libcrypto-mac'
+						}
                     }
                 }
                 stage('cross compile for windows') {
@@ -43,12 +47,14 @@ pipeline {
                         label 'linux'
                     }
                     steps {
-                        sh "git clone git://git.openssl.org/openssl.git && cd openssl"
-                        sh "git checkout ${OPENSSL_BRANCH}"
-                        sh "perl ./Configure --cross-compile-prefix=x86_64-w64-mingw32- mingw64 ${CONFIGURE_PARAMS}"
-                        sh "make build_generated && make libcrypto.a"
-                        sh "mv libcrypto.a libcrypto-win.a"
-                        stash includes: 'libcrypto-win.a', name: 'libcrypto-win'
+                        sh "git clone git://git.openssl.org/openssl.git"
+						dir ("${WORKSPACE}/openssl") {
+							sh "git checkout ${OPENSSL_BRANCH}"
+							sh "perl ./Configure --cross-compile-prefix=x86_64-w64-mingw32- mingw64 ${CONFIGURE_PARAMS}"
+							sh "make build_generated && make libcrypto.a"
+							sh "mv libcrypto.a libcrypto-win.a"
+							stash includes: 'libcrypto-win.a', name: 'libcrypto-win'
+                        }
                     }
                 }
             }
