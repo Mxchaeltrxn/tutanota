@@ -67,7 +67,7 @@ pipeline {
             steps {
                 unstash 'libcrypto-linux'
                 unstash 'libcrypto-mac'
-                unstash 'libcrypto-win'
+//                 unstash 'libcrypto-win'
 
 				script {
 					def util = load "jenkins-lib/util.groovy"
@@ -97,15 +97,4 @@ pipeline {
             }
         }
     }
-
-	post {
-		// Clean after build
-		always {
-			cleanWs(cleanWhenNotBuilt: true,
-					deleteDirs: true,
-					disableDeferredWipeout: true,
-					notFailBuild: true,
-					patterns: [[pattern: '.gitignore', type: 'INCLUDE']])
-		}
-	}
 }
