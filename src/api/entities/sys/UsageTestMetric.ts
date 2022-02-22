@@ -20,17 +20,24 @@ export const _TypeModel: TypeModel = {
 			"final": true,
 			"encrypted": false
 		},
-		"type": {
+		"name": {
 			"id": 1917,
 			"type": "String",
 			"cardinality": "One",
 			"final": true,
 			"encrypted": false
 		},
-		"value": {
+		"type": {
 			"id": 1918,
-			"type": "String",
+			"type": "Number",
 			"cardinality": "One",
+			"final": true,
+			"encrypted": false
+		},
+		"value": {
+			"id": 1919,
+			"type": "String",
+			"cardinality": "ZeroOrOne",
 			"final": true,
 			"encrypted": false
 		}
@@ -48,6 +55,7 @@ export type UsageTestMetric = {
 	_type: TypeRef<UsageTestMetric>;
 
 	_id: Id;
-	type: string;
-	value: string;
+	name: string;
+	type: NumberString;
+	value: null | string;
 }

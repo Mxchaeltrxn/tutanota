@@ -27,8 +27,8 @@ export class UsageTestModel implements PingAdapter, StorageAdapter {
 			const test = new UsageTest(usageTestAssignment.testId, usageTestAssignment.name, Number(usageTestAssignment.variant),
 				LIVE_STATES.includes(usageTestAssignment.state as UsageTestState))
 
-			for (let i = 0; i < Number(usageTestAssignment.numberOfStages); i++) {
-				test.addStage(new Stage(i, test))
+			for (let [index, stage] of usageTestAssignment.stages.entries()) {
+				test.addStage(new Stage(index, test))
 			}
 
 			return test

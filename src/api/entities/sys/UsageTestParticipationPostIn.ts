@@ -9,20 +9,20 @@ export const _TypeModel: TypeModel = {
 	"name": "UsageTestParticipationPostIn",
 	"since": 72,
 	"type": "DATA_TRANSFER_TYPE",
-	"id": 1959,
-	"rootId": "A3N5cwAHpw",
+	"id": 1964,
+	"rootId": "A3N5cwAHrA",
 	"versioned": false,
 	"encrypted": false,
 	"values": {
 		"_format": {
-			"id": 1960,
+			"id": 1965,
 			"type": "Number",
 			"cardinality": "One",
 			"final": false,
 			"encrypted": false
 		},
 		"testId": {
-			"id": 1961,
+			"id": 1966,
 			"type": "GeneratedId",
 			"cardinality": "One",
 			"final": false,
@@ -31,7 +31,7 @@ export const _TypeModel: TypeModel = {
 	},
 	"associations": {
 		"metrics": {
-			"id": 1962,
+			"id": 1967,
 			"type": "AGGREGATION",
 			"cardinality": "Any",
 			"final": false,

@@ -199,6 +199,7 @@ const map = {
     BlobAccessInfo: () => import('./BlobAccessInfo.js'),
     WebauthnResponseData: () => import('./WebauthnResponseData.js'),
     UsageTestMetric: () => import('./UsageTestMetric.js'),
+    UsageTestStage: () => import('./UsageTestStage.js'),
     UsageTestAssignmentPostIn: () => import('./UsageTestAssignmentPostIn.js'),
     UsageTestAssignment: () => import('./UsageTestAssignment.js'),
     UsageTestAssignmentPostOut: () => import('./UsageTestAssignmentPostOut.js'),
