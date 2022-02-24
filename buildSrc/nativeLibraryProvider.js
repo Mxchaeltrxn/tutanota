@@ -2,6 +2,7 @@ import path from "path"
 import fs from "fs"
 import stream from "stream"
 import {spawn, execFileSync} from "child_process"
+import {createRequire} from "module"
 
 /**
  * Rebuild native lib for either current node version or for electron version and
@@ -28,21 +29,22 @@ export async function getNativeLibModulePath({environment, rootDir, nodeModule, 
 	} else {
 		filePath = `${nodeModule}-${libraryVersion}.node`
 	}
-	const libPath = path.resolve(path.join(dir, filePath))
+	const outputPath = path.resolve(path.join(dir, filePath))
 	try {
 		// Check if the file is there
-		await fs.promises.access(libPath)
-		log(`Using cached ${nodeModule} at`, libPath)
+		await fs.promises.access(outputPath)
+		log(`Using cached ${nodeModule} at`, outputPath)
 	} catch {
-		log(`Compiling ${nodeModule}...`)
+		log(`Compiling ${nodeModule}..., rootDir: ${rootDir}`)
 		await rebuild({environment, rootDir, electronVersion, log, nodeModule})
-		await fs.promises.copyFile(path.join(rootDir, `node_modules/${nodeModule}/${builtPath}`), libPath)
+		await fs.promises.copyFile(path.join(await getModuleDir(rootDir, nodeModule), builtPath), outputPath)
 	}
-	return libPath
+	return outputPath
 }
 
 async function rebuild({environment, rootDir, electronVersion, log, nodeModule}) {
-	const libDir = path.join(rootDir, `./node_modules/${nodeModule}`)
+	const libDir = await getModuleDir(rootDir, nodeModule) // path.join(rootDir, `./node_modules/${nodeModule}`)
+	log("module dir is at ", libDir)
 	const logStream = new stream.Writable({
 		autoDestroy: true,
 		write(chunk, encoding, callback) {
@@ -92,4 +94,15 @@ async function rebuild({environment, rootDir, electronVersion, log, nodeModule})
 
 function getVersion(nodeModule) {
 	return execFileSync("npm", ["info", nodeModule, "version"]).toString().trim()
+}
+
+async function getModuleDir(rootDir, nodeModule) {
+	// We resolve relative to the rootDir passed to us
+	// however, if we just use rootDir as the base for require() it doesn't work: node_modules must be at the directory up from yours (for whatever reason).
+	// so we provide a directory one level deeper. Practically it doesn't matter if "src" subdirectory exists or not, this is just to give node some
+	// subdirectory to work against.
+	const filePath = createRequire(path.join(rootDir, "src")).resolve(nodeModule)
+	const pathEnd = path.join("node_modules", nodeModule)
+	const endIndex = filePath.lastIndexOf(pathEnd)
+	return path.join(filePath.substring(0, endIndex), pathEnd)
 }

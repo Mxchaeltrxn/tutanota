@@ -44,15 +44,13 @@ export function keytarNativePlugin(
 	return {
 		name: "keytar-native-banner-plugin",
 		async buildStart() {
-			outputPath = await getNativeLibModulePath({
-				environment: "electron",
-				rootDir,
-				log,
-				nodeModule: "keytar",
-				builtPath: "build/Release/keytar.node",
-			})
-			// await fs.promises.mkdir(path.dirname(dstPath), {recursive: true})
-			// await fs.promises.copyFile(modulePath, dstPath)
+				outputPath = await getNativeLibModulePath({
+					environment: "electron",
+					rootDir,
+					log,
+					nodeModule: "keytar",
+					builtPath: "build/Release/keytar.node",
+				})
 		},
 		resolveId(id) {
 			if (id.endsWith("keytar.node")) {
