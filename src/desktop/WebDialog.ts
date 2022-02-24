@@ -52,12 +52,16 @@ export class WebDialog<FacadeType extends object> {
 				throw e
 			})
 			.finally(() => {
-				if (!this.browserWindow.isDestroyed()) this.browserWindow.close()
+				this.close()
 			})
 	}
 
 	cancel() {
-		this.browserWindow.close()
+		this.close()
+	}
+
+	private close() {
+		if (!this.browserWindow.isDestroyed()) this.browserWindow.close()
 	}
 }
 
@@ -69,6 +73,9 @@ export class WebDialogController implements IWebDialogController {
 
 	async create<FacadeType extends object>(parentWindowId: number, urlToOpen: URL): Promise<WebDialog<FacadeType>> {
 		const bw = await this.createBrowserWindow(parentWindowId)
+		// Holding a separate reference on purpose. When BrowserWindow is destroyed and WebContents fire "destroyed" event, we can't get WebContents from
+		// BrowserWindow anymore.
+		const {webContents} = bw
 		const closeDefer = defer<never>()
 		bw.on("closed", () => {
 			console.log("web dialog window closed")
@@ -76,16 +83,17 @@ export class WebDialogController implements IWebDialogController {
 		})
 
 		register(bw, "F12", () => {
-			bw.webContents.openDevTools()
+			webContents.openDevTools()
 		})
 
 		bw.once('ready-to-show', () => bw.show())
-		bw.webContents.on("did-fail-load", () => closeDefer.reject(new Error(`Could not load web dialog at ${urlToOpen}`)))
+		webContents.on("did-fail-load", () => closeDefer.reject(new Error(`Could not load web dialog at ${urlToOpen}`)))
 		await bw.loadURL(urlToOpen.toString())
 
-		const facade = await this.initRemoteWebauthn<FacadeType>(bw.webContents)
-
-		bw.webContents.on("destroyed", () => this.uninitRemoteWebauthn(bw.webContents))
+		const facade = await this.initRemoteWebauthn<FacadeType>(webContents)
+		webContents.on("destroyed", () => {
+			this.uninitRemoteWebauthn(webContents)
+		})
 
 		return new WebDialog(facade, closeDefer.promise, bw)
 	}
