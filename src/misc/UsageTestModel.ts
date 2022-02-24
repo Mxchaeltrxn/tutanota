@@ -7,10 +7,10 @@ import {serviceRequest, serviceRequestVoid} from "../api/main/ServiceRequest"
 import {createUsageTestParticipationPostIn} from "../api/entities/sys/UsageTestParticipationPostIn"
 import {UsageTestParticipationPostOutTypeRef} from "../api/entities/sys/UsageTestParticipationPostOut"
 import {createUsageTestParticipationPutIn} from "../api/entities/sys/UsageTestParticipationPutIn"
-import {createUsageTestMetric} from "../api/entities/sys/UsageTestMetric"
 import {UsageTestState} from "../api/common/TutanotaConstants"
 import {ofClass} from "@tutao/tutanota-utils"
 import {PreconditionFailedError} from "../api/common/error/RestError"
+import {createUsageTestMetric} from "../api/entities/sys/UsageTestMetric"
 
 const FIRST_STAGE = 0
 const LIVE_STATES = [UsageTestState.Live]
@@ -36,12 +36,13 @@ export class UsageTestModel implements PingAdapter, StorageAdapter {
 	}
 
 	async sendPing(test: UsageTest, stage: Stage): Promise<void> {
-		const metrics = Array.from(stage.collectedMetrics).map(([key, value]) => {
-			const ping = createUsageTestMetric()
-			ping.type = key
-			ping.value = value
+		const metrics = Array.from(stage.collectedMetrics).map(([key, {name, type, value}]) => {
+			const metric = createUsageTestMetric()
+			metric.name = name
+			metric.type = type
+			metric.value = value
 
-			return ping
+			return metric
 		})
 
 		if (stage.number === FIRST_STAGE) {

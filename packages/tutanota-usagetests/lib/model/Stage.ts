@@ -1,9 +1,11 @@
 import {UsageTest} from "./UsageTest.js"
 
-export type Metric = any
-export type MetricKey = string
-export type Metrics = Map<MetricKey, Metric>
-export type MetricsToCollect = Set<MetricKey>
+export type Metrics = Map<string, Metric>
+type Metric = {
+	name: string,
+	type: string,
+	value: string | null,
+}
 
 export class Stage {
 	readonly number: number
@@ -16,7 +18,7 @@ export class Stage {
 		this.test = test
 		this.completed = false
 
-		this.collectedMetrics = new Map<MetricKey, Metric>()
+		this.collectedMetrics = new Map<string, Metric>()
 	}
 
 	/**
@@ -30,8 +32,8 @@ export class Stage {
 		}
 	}
 
-	setMetric(key: MetricKey, value: Metric) {
-		this.collectedMetrics.set(key, value)
+	setMetric(metric: Metric) {
+		this.collectedMetrics.set(metric.name, metric)
 	}
 }
 
@@ -40,7 +42,7 @@ export class ShamStage extends Stage {
 		// no op
 	}
 
-	setMetric(key: MetricKey, value: Metric) {
+	setMetric(metric: Metric) {
 		// no op
 	}
 }
