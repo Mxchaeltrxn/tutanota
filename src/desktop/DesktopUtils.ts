@@ -1,8 +1,7 @@
 import path from "path"
 import {spawn} from "child_process"
 import type {Rectangle} from "electron"
-import {app} from "electron"
-import {defer, delay, noOp, uint8ArrayToHex} from "@tutao/tutanota-utils"
+import {defer, delay, uint8ArrayToHex} from "@tutao/tutanota-utils"
 import {log} from "./DesktopLog"
 import {DesktopCryptoFacade} from "./DesktopCryptoFacade"
 import {fileExists, swapFilename} from "./PathUtils"
@@ -13,19 +12,17 @@ import {DataFile} from "../api/common/DataFile";
 import {ProgrammingError} from "../api/common/error/ProgrammingError"
 
 export class DesktopUtils {
-	private readonly _fs: FsExports
-	private readonly _electron: ElectronExports
-	private readonly _desktopCrypto: DesktopCryptoFacade
-	private readonly _topLevelDownloadDir: string = "tutanota"
+	private readonly topLevelDownloadDir: string = "tutanota"
 
-	constructor(fs: FsExports, electron: ElectronExports, desktopCrypto: DesktopCryptoFacade) {
-		this._fs = fs
-		this._electron = electron
-		this._desktopCrypto = desktopCrypto
+	constructor(
+		private readonly fs: FsExports,
+		private readonly electron: ElectronExports,
+		private readonly desktopCrypto: DesktopCryptoFacade
+	) {
 	}
 
 	checkIsMailtoHandler(): Promise<boolean> {
-		return Promise.resolve(app.isDefaultProtocolClient("mailto"))
+		return Promise.resolve(this.electron.app.isDefaultProtocolClient("mailto"))
 	}
 
 	checkIsPerUserInstall(): Promise<boolean> {
@@ -38,7 +35,7 @@ export class DesktopUtils {
 	 * @param path: the file to touch
 	 */
 	touch(path: string): void {
-		this._fs.closeSync(this._fs.openSync(path, "a"))
+		this.fs.closeSync(this.fs.openSync(path, "a"))
 	}
 
 	/**
@@ -54,7 +51,7 @@ export class DesktopUtils {
 		}
 
 		try {
-			const data = await this._fs.promises.readFile(uriOrPath)
+			const data = await this.fs.promises.readFile(uriOrPath)
 			const name = path.basename(uriOrPath)
 			return {
 				_type: "DataFile",
@@ -77,7 +74,7 @@ export class DesktopUtils {
 				await this.doRegisterMailtoOnWin32WithCurrentUser()
 				break
 			case "darwin":
-				const didRegister = app.setAsDefaultProtocolClient("mailto")
+				const didRegister = this.electron.app.setAsDefaultProtocolClient("mailto")
 				if (!didRegister) {
 					throw new Error("Could not register as mailto handler")
 				}
@@ -96,7 +93,7 @@ export class DesktopUtils {
 				await this.doUnregisterMailtoOnWin32WithCurrentUser()
 				break
 			case "darwin":
-				const didUnregister = app.removeAsDefaultProtocolClient("mailto")
+				const didUnregister = this.electron.app.removeAsDefaultProtocolClient("mailto")
 				if (!didUnregister) {
 					throw new Error("Could not unregister as mailto handler")
 				}
@@ -112,14 +109,15 @@ export class DesktopUtils {
 	 * reads the lockfile and then writes the own version into the lockfile
 	 * @returns {Promise<boolean>} whether the lock was overridden by another version
 	 */
-	singleInstanceLockOverridden(): Promise<boolean> {
-		const lockfilePath = getLockFilePath()
-		return this._fs.promises
-				   .readFile(lockfilePath, "utf8")
-				   .then(version => {
-					   return this._fs.promises.writeFile(lockfilePath, app.getVersion(), "utf8").then(() => version !== app.getVersion())
-				   })
-				   .catch(() => false)
+	async singleInstanceLockOverridden(): Promise<boolean> {
+		const lockfilePath = this.getLockFilePath()
+		try {
+			const version = await this.fs.promises.readFile(lockfilePath, "utf8")
+			await this.fs.promises.writeFile(lockfilePath, this.electron.app.getVersion(), "utf8")
+			return version !== this.electron.app.getVersion()
+		} catch {
+			return false
+		}
 	}
 
 	/**
@@ -133,33 +131,41 @@ export class DesktopUtils {
 	 *
 	 * @returns {Promise<boolean>} whether the app was successful in getting the lock
 	 */
-	makeSingleInstance(): Promise<boolean> {
-		const lockfilePath = getLockFilePath()
+	async makeSingleInstance(): Promise<boolean> {
+
+		const islock = this.electron.app.requestSingleInstanceLock()
+		console.log("locked:", islock)
+
+		const lockfilePath = this.getLockFilePath()
+		const version = this.electron.app.getVersion()
 		// first, put down a file in temp that contains our version.
 		// will overwrite if it already exists.
 		// errors are ignored and we fall back to a version agnostic single instance lock.
-		return this._fs.promises
-				   .writeFile(lockfilePath, app.getVersion(), "utf8")
-				   .catch(noOp)
-				   .then(() => {
-					   // try to get the lock, if there's already an instance running,
-					   // give the other instance time to see if it wants to release the lock.
-					   // if it changes the version back, it was a different version and
-					   // will terminate itself.
-					   return app.requestSingleInstanceLock()
-						   ? Promise.resolve(true)
-						   : delay(1500)
-							   .then(() => this.singleInstanceLockOverridden())
-							   .then(canStay => {
-								   if (canStay) {
-									   app.requestSingleInstanceLock()
-								   } else {
-									   app.quit()
-								   }
-
-								   return canStay
-							   })
-				   })
+		console.log("writing", version)
+		try {
+			// as of electron 17.1.0, fs.promises.writeFile doesn't seem to ever resolve or reject
+			this.fs.writeFileSync(lockfilePath, version, "utf8")
+		} catch {
+			console.log("could not write lockfile, ignoring")
+		}
+		// try to get the lock, if there's already an instance running,
+		// give the other instance time to see if it wants to release the lock.
+		// if it changes the version back, it was a different version and
+		// will terminate itself.
+		console.log("requesting")
+		const hasLock = await this.electron.app.requestSingleInstanceLock()
+		if (hasLock) {
+			return true
+		}
+		await delay(1500)
+		const canStay = await this.singleInstanceLockOverridden()
+		if (canStay) {
+			this.electron.app.requestSingleInstanceLock()
+		} else {
+			console.log("quitting")
+			this.electron.app.quit()
+		}
+		return canStay
 	}
 
 
@@ -177,7 +183,7 @@ export class DesktopUtils {
 			stdio: ["ignore", "inherit", "inherit"],
 			detached: false,
 		}).on("exit", (code, signal) => {
-			this._fs.unlinkSync(file)
+			this.fs.unlinkSync(file)
 
 			if (code === 0) {
 				deferred.resolve(undefined)
@@ -194,12 +200,12 @@ export class DesktopUtils {
 	 * @returns path to the written file
 	 */
 	private async _writeToDisk(contents: string): Promise<string> {
-		const filename = uint8ArrayToHex(this._desktopCrypto.randomBytes(12))
+		const filename = uint8ArrayToHex(this.desktopCrypto.randomBytes(12))
 		const tmpPath = this.getTutanotaTempPath("reg")
-		await this._fs.promises.mkdir(tmpPath, {recursive: true})
+		await this.fs.promises.mkdir(tmpPath, {recursive: true})
 		const filePath = path.join(tmpPath, filename)
 
-		await this._fs.promises.writeFile(filePath, contents, {
+		await this.fs.promises.writeFile(filePath, contents, {
 			encoding: "utf-8",
 			mode: 0o400,
 		})
@@ -222,11 +228,11 @@ export class DesktopUtils {
 		// we may be a per-machine installation that's used by multiple users, so the dll will replace %USERPROFILE%
 		// with the value of the USERPROFILE env var.
 		const appData = path.join("%USERPROFILE%", "AppData")
-		const logPath = path.join(appData, "Roaming", app.getName(), "logs")
-		const tmpPath = path.join(appData, "Local", "Temp", this._topLevelDownloadDir, "attach")
+		const logPath = path.join(appData, "Roaming", this.electron.app.getName(), "logs")
+		const tmpPath = path.join(appData, "Local", "Temp", this.topLevelDownloadDir, "attach")
 		const tmpRegScript = makeRegisterKeysScript(RegistryRoot.CURRENT_USER, {execPath, dllPath, logPath, tmpPath})
 		await this._executeRegistryScript(tmpRegScript)
-		app.setAsDefaultProtocolClient("mailto")
+		this.electron.app.setAsDefaultProtocolClient("mailto")
 		await this._openDefaultAppsSettings()
 	}
 
@@ -234,7 +240,7 @@ export class DesktopUtils {
 		if (process.platform !== "win32") {
 			throw new ProgrammingError("Not win32")
 		}
-		app.removeAsDefaultProtocolClient('mailto')
+		this.electron.app.removeAsDefaultProtocolClient('mailto')
 		const tmpRegScript = makeUnregisterKeysScript(RegistryRoot.CURRENT_USER)
 		await this._executeRegistryScript(tmpRegScript)
 		await this._openDefaultAppsSettings()
@@ -242,7 +248,7 @@ export class DesktopUtils {
 
 	private async _openDefaultAppsSettings(): Promise<void> {
 		try {
-			await this._electron.shell.openExternal("ms-settings:defaultapps")
+			await this.electron.shell.openExternal("ms-settings:defaultapps")
 		} catch (e) {
 			// ignoring, this is just a convenience for the user
 			console.error("failed to open default apps settings page:", e.message)
@@ -255,15 +261,16 @@ export class DesktopUtils {
 	 * @returns {string}
 	 */
 	getTutanotaTempPath(...subdirs: string[]): string {
-		return path.join(this._electron.app.getPath("temp"), this._topLevelDownloadDir, ...subdirs)
+		return path.join(this.electron.app.getPath("temp"), this.topLevelDownloadDir, ...subdirs)
+	}
+
+	getLockFilePath() {
+		// don't get temp dir path from DesktopDownloadManager because the path returned from there may be deleted at some point,
+		// we want to put the lockfile in root tmp so it persists
+		return path.join(this.electron.app.getPath("temp"), "tutanota_desktop_lockfile")
 	}
 }
 
-function getLockFilePath() {
-	// don't get temp dir path from DesktopDownloadManager because the path returned from there may be deleted at some point,
-	// we want to put the lockfile in root tmp so it persists
-	return path.join(app.getPath("temp"), "tutanota_desktop_lockfile")
-}
 
 export function isRectContainedInRect(closestRect: Rectangle, lastBounds: Rectangle): boolean {
 	return (
