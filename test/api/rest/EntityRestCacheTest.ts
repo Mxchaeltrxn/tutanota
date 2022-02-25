@@ -989,8 +989,14 @@ export function testEntityRestCache(name: string, getStorage: (userIdProvider: U
 				unmockAttribute(mock)
 			})
 
-			o("When a range outside the existing range is requested, the exiting range will be extended. Not reverse, away from range", async function () {
-				const ids = [createId("1"), createId("2"), createId("3"), createId("4"), createId("5")]
+			o.only("When a range outside the existing range is requested, the existing range will be extended. Not reverse, away from range", async function () {
+				const ids = [
+					createId("1"),
+					createId("2"),
+					createId("3"),
+					createId("4"),
+					createId("5")
+				]
 				const listId1 = "listId1"
 
 				const mail1 = createMailInstance(listId1, ids[0], "hello1")
@@ -998,8 +1004,6 @@ export function testEntityRestCache(name: string, getStorage: (userIdProvider: U
 				const mail3 = createMailInstance(listId1, ids[2], "hello3")
 				const mail4 = createMailInstance(listId1, ids[3], "hello4")
 				const mail5 = createMailInstance(listId1, ids[4], "hello5")
-
-				const mails = [mail1, mail2, mail3, mail4, mail5]
 
 				await storage.setNewRangeForList(MailTypeRef, listId1, ids[0], ids[1])
 
@@ -1011,12 +1015,10 @@ export function testEntityRestCache(name: string, getStorage: (userIdProvider: U
 
 				//mails are loaded in steps pf count until ranges are joined
 				const loadRange = o.spy(function (typeRef, listId, loadStartId, count, reverse) {
-					if (loadStartId === originalUpper && count === 2) {
-						return Promise.resolve([mails[1], mails[2]])
-					} else if (loadStartId === ids[2] && count === 2) {
-						return Promise.resolve([mails[2], mails[3]])
-					} else if (loadStartId === ids[3] && count === 2) {
-						return Promise.resolve([mails[3], mails[4]])
+					if (loadStartId === createId("2") && count === 2) {
+						return Promise.resolve([mail3, mail4])
+					} else if (loadStartId === createId("4") && count === 2) {
+						return Promise.resolve([mail5])
 					} else {
 						throw new Error(`unexpected load request: startid ${loadStartId} and count ${count}`)
 					}
@@ -1036,7 +1038,7 @@ export function testEntityRestCache(name: string, getStorage: (userIdProvider: U
 
 			})
 
-			o("When a range outside the existing range is requested, the exiting range will be extended. Reverse, towards range", async function () {
+			o("When a range outside the existing range is requested, the existing range will be extended. Reverse, towards range", async function () {
 				const ids = [createId("1"), createId("2"), createId("3"), createId("4"), createId("5")]
 				const listId1 = "listId1"
 
